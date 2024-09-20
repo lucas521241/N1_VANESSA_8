@@ -1,10 +1,14 @@
 import numpy as np
 import pandas as pd
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, export_text
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import joblib
 import os
+import logging
+
+# Configuração do logger
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class TicTacToeAI:
     def __init__(self):
@@ -42,10 +46,18 @@ class TicTacToeAI:
         predictions = self.model.predict(X_test)
         accuracy = accuracy_score(y_test, predictions)
         print(f"Acurácia do modelo: {accuracy}")
+
+        # Salvar acurácia em um CSV
+        accuracy_data = pd.DataFrame({'Accuracy': [accuracy]})
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        accuracy_data.to_csv('data/accuracy_data.csv', mode='a', header=not os.path.exists('data/accuracy_data.csv'), index=False)
+
         if not os.path.exists('models'):
             os.makedirs('models')
         joblib.dump(self.model, 'models/model.pkl')
         print("Modelo salvo em 'models/model.pkl'.")
+        logging.info(f'Modelo treinado com acurácia de {accuracy}')
 
     def load_model(self):
         try:
@@ -59,4 +71,12 @@ class TicTacToeAI:
             raise ValueError("O modelo não foi treinado ainda. Treine o modelo antes de usá-lo.")
         features = self.board_to_features(board)
         move = self.model.predict([features])[0]
+        logging.info(f'IA escolheu a posição {divmod(move, 3)} com base na árvore de decisão.')
         return divmod(move, 3)
+
+    def visualize_tree(self):
+        if self.model and self.X_train is not None:
+            tree_rules = export_text(self.model, feature_names=[f'feature_{i}' for i in range(self.X_train.shape[1])])
+            logging.info(f'Árvore de Decisão:\n{tree_rules}')
+        else:
+            logging.warning("Modelo não treinado ou dados de treinamento ausentes.")
